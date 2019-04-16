@@ -75,6 +75,7 @@ static int recurse_submodules = RECURSE_SUBMODULES_DEFAULT;
 
 /* Options passed to git-merge or git-rebase */
 static enum rebase_type opt_rebase = -1;
+static char *opt_reset;
 static char *opt_diffstat;
 static char *opt_log;
 static char *opt_signoff;
@@ -129,6 +130,9 @@ static struct option pull_options[] = {
 	  "(false|true|merges|preserve|interactive)",
 	  N_("incorporate changes by rebasing rather than merging"),
 	  PARSE_OPT_OPTARG, parse_opt_rebase),
+	OPT_PASSTHRU(0, "reset", &opt_reset, NULL,
+		N_("discard all local changes rather than merging"),
+		PARSE_OPT_NOARG | PARSE_OPT_NONEG),
 	OPT_PASSTHRU('n', NULL, &opt_diffstat, NULL,
 		N_("do not show a diffstat at the end of the merge"),
 		PARSE_OPT_NOARG | PARSE_OPT_NONEG),
@@ -907,6 +911,21 @@ static int run_rebase(const struct object_id *curr_head,
 	return ret;
 }
 
+/**
+ * Runs git-reset, returning its exit status.
+ */
+static int run_reset(void)
+{
+	int ret;
+	struct argv_array args = ARGV_ARRAY_INIT;
+	argv_array_pushl(&args, "reset", NULL);
+	argv_array_push(&args, "--hard");
+	argv_array_push(&args, "FETCH_HEAD");
+	ret = run_command_v_opt(args.argv, RUN_GIT_CMD);
+	argv_array_clear(&args);
+	return ret;
+}
+
 int cmd_pull(int argc, const char **argv, const char *prefix)
 {
 	const char *repo, **refspecs;
@@ -948,6 +967,9 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 
 	autostash = config_autostash;
 	if (opt_rebase) {
+		if (opt_rebase && opt_reset)
+			die(_("--rebase and --reset are mutually exclusive."));
+
 		if (opt_autostash != -1)
 			autostash = opt_autostash;
 
@@ -1041,6 +1063,12 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 			     recurse_submodules == RECURSE_SUBMODULES_ON_DEMAND))
 			ret = rebase_submodules();
 
+		return ret;
+	} else if (opt_reset) {
+		int ret = run_reset();
+		if (!ret && (recurse_submodules == RECURSE_SUBMODULES_ON ||
+			     recurse_submodules == RECURSE_SUBMODULES_ON_DEMAND))
+			ret = update_submodules();
 		return ret;
 	} else {
 		int ret = run_merge();

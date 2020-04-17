@@ -2176,6 +2176,42 @@ void ref_array_clear(struct ref_array *array)
 	}
 }
 
+static void do_upstream_gone_filter(struct ref_filter_cbdata *ref_cbdata)
+{
+	int i, old_nr;
+	struct ref_filter *filter = ref_cbdata->filter;
+	struct ref_array *array = ref_cbdata->array;
+	struct branch *branch;
+	int include_upstream_gone = 0;
+	if (filter->upstream_gone == REF_FILTER_UPSTREAM_GONE_INCLUDE)
+		include_upstream_gone = 1;
+
+	old_nr = array->nr;
+	array->nr = 0;
+
+	for (i = 0; i < old_nr; i++) {
+		struct ref_array_item *item = array->items[i];
+		const char *branch_name = item->refname;
+		struct branch *branch;
+		int num_ours, num_theirs, sti, upstream_is_gone;
+		const char *base;
+
+		if (ref_kind_from_refname(branch_name) != FILTER_REFS_BRANCHES)
+			continue;
+
+		skip_prefix(branch_name, "refs/heads/", &branch_name);
+		branch = branch_get(branch_name);
+		sti = stat_tracking_info(branch, &num_ours, &num_theirs, &base,
+					 0, AHEAD_BEHIND_QUICK);
+		upstream_is_gone = (base && sti < 0);
+
+		if (upstream_is_gone == include_upstream_gone)
+			array->items[array->nr++] = array->items[i];
+		else
+			free_array_item(item);
+	}
+}
+
 static void do_merge_filter(struct ref_filter_cbdata *ref_cbdata)
 {
 	struct rev_info revs;
@@ -2265,6 +2301,9 @@ int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int
 
 	clear_contains_cache(&ref_cbdata.contains_cache);
 	clear_contains_cache(&ref_cbdata.no_contains_cache);
+
+	if (filter->upstream_gone)
+		do_upstream_gone_filter(&ref_cbdata);
 
 	/*  Filters that need revision walking */
 	if (filter->merge_commit)

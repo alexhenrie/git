@@ -62,6 +62,12 @@ struct ref_filter {
 	} merge;
 	struct commit *merge_commit;
 
+	enum {
+		REF_FILTER_UPSTREAM_GONE_NONE = 0,
+		REF_FILTER_UPSTREAM_GONE_INCLUDE,
+		REF_FILTER_UPSTREAM_GONE_OMIT
+	} upstream_gone;
+
 	unsigned int with_commit_tag_algo : 1,
 		match_as_path : 1,
 		ignore_case : 1,

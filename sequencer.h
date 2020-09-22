@@ -88,6 +88,7 @@ enum todo_command {
 	TODO_REWORD,
 	TODO_FIXUP,
 	TODO_SQUASH,
+	TODO_SPLIT,
 	/* commands that do something else than handling a single commit */
 	TODO_EXEC,
 	TODO_BREAK,

@@ -201,6 +201,7 @@ r, reword <commit> = use commit, but edit the commit message
 e, edit <commit> = use commit, but stop for amending
 s, squash <commit> = use commit, but meld into previous commit
 f, fixup <commit> = like \"squash\", but discard this commit's log message
+i, split <commit> = divide commit in two
 x, exec <commit> = run command (the rest of the line) using shell
 d, drop <commit> = remove commit
 l, label <label> = label current HEAD with a name

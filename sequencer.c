@@ -1630,6 +1630,7 @@ static struct {
 	{ 'r', "reword" },
 	{ 'f', "fixup" },
 	{ 's', "squash" },
+	{ 'i', "split" },
 	{ 'x', "exec" },
 	{ 'b', "break" },
 	{ 'l', "label" },
@@ -1667,17 +1668,7 @@ static int is_fixup(enum todo_command command)
 /* Does this command create a (non-merge) commit? */
 static int is_pick_or_similar(enum todo_command command)
 {
-	switch (command) {
-	case TODO_PICK:
-	case TODO_REVERT:
-	case TODO_EDIT:
-	case TODO_REWORD:
-	case TODO_FIXUP:
-	case TODO_SQUASH:
-		return 1;
-	default:
-		return 0;
-	}
+	return command >= TODO_PICK && command <= TODO_SPLIT;
 }
 
 static int update_squash_messages(struct repository *r,
@@ -1863,6 +1854,10 @@ static int do_pick_commit(struct repository *r,
 		int cnt;
 		struct commit_list *p;
 
+		if (command == TODO_SPLIT)
+			return error(_("cannot split merge commit %s"),
+				oid_to_hex(&commit->object.oid));
+
 		if (!opts->mainline)
 			return error(_("commit %s is a merge but no -m option was given."),
 				oid_to_hex(&commit->object.oid));
@@ -1889,7 +1884,7 @@ static int do_pick_commit(struct repository *r,
 		return error(_("cannot get commit message for %s"),
 			oid_to_hex(&commit->object.oid));
 
-	if (opts->allow_ff && !is_fixup(command) &&
+	if (opts->allow_ff && !is_fixup(command) && command != TODO_SPLIT &&
 	    ((parent && oideq(&parent->object.oid, &head)) ||
 	     (!parent && unborn))) {
 		if (is_rebase_i(opts))
@@ -1983,7 +1978,19 @@ static int do_pick_commit(struct repository *r,
 
 	if (is_rebase_i(opts) && write_author_script(msg.message) < 0)
 		res = -1;
-	else if (!opts->strategy || !strcmp(opts->strategy, "recursive") || command == TODO_REVERT) {
+	else if (command == TODO_SPLIT) {
+		struct child_process cmd = CHILD_PROCESS_INIT;
+		cmd.git_cmd = 1;
+		strvec_push(&cmd.args, "checkout");
+		strvec_push(&cmd.args, "-p");
+		strvec_push(&cmd.args, oid_to_hex(&commit->object.oid));
+		res = run_command(&cmd);
+		if (res != 0)
+			goto leave;
+		strbuf_addstr(&msgbuf, "\n# This is the first of two split commits");
+		res = write_message(msgbuf.buf, msgbuf.len,
+				    git_path_merge_msg(r), 0);
+	} else if (!opts->strategy || !strcmp(opts->strategy, "recursive") || command == TODO_REVERT) {
 		res = do_recursive_merge(r, base, next, base_label, next_label,
 					 &head, &msgbuf, opts);
 		if (res < 0)
@@ -2006,7 +2013,6 @@ static int do_pick_commit(struct repository *r,
 		free_commit_list(common);
 		free_commit_list(remotes);
 	}
-	strbuf_release(&msgbuf);
 
 	/*
 	 * If the merge was clean or if it failed due to conflict, we write
@@ -2051,7 +2057,25 @@ static int do_pick_commit(struct repository *r,
 			_("dropping %s %s -- patch contents already upstream\n"),
 			oid_to_hex(&commit->object.oid), msg.subject);
 	} /* else allow == 0 and there's nothing special to do */
-	if (!opts->no_commit && !drop_commit) {
+
+	if (command == TODO_SPLIT) {
+		struct child_process cmd = CHILD_PROCESS_INIT;
+		size_t last_line_break = strrchr(msgbuf.buf, '\n') - msgbuf.buf;
+		cmd.git_cmd = 1;
+		strvec_push(&cmd.args, "read-tree");
+		strvec_push(&cmd.args, "--reset");
+		strvec_push(&cmd.args, "-u");
+		strvec_push(&cmd.args, oid_to_hex(&commit->object.oid));
+		strbuf_setlen(&msgbuf, last_line_break);
+		strbuf_addstr(&msgbuf, _("\n# This is the second of two split commits"));
+		flags |= EDIT_MSG | VERIFY_MSG;
+		res = run_git_commit(r, NULL, opts, flags);
+		res |= run_command(&cmd);
+		res |= write_message(msgbuf.buf, msgbuf.len,
+				     git_path_merge_msg(r), 0);
+		res |= run_git_commit(r, NULL, opts, flags);
+		*check_todo = 1;
+	} else if (!opts->no_commit && !drop_commit) {
 		if (author || command == TODO_REVERT || (flags & AMEND_MSG))
 			res = do_commit(r, msg_file, author, opts, flags,
 					commit? &commit->object.oid : NULL);
@@ -2077,6 +2101,7 @@ fast_forward_edit:
 	}
 
 leave:
+	strbuf_release(&msgbuf);
 	free_message(commit, &msg);
 	free(author);
 	update_abort_safety_file();
@@ -4056,7 +4081,7 @@ static int pick_commits(struct repository *r,
 				return stopped_at_head(r);
 			}
 		}
-		if (item->command <= TODO_SQUASH) {
+		if (item->command <= TODO_SPLIT) {
 			if (is_rebase_i(opts))
 				setenv(GIT_REFLOG_ACTION, reflog_message(opts,
 					command_to_string(item->command), NULL),

@@ -43,10 +43,16 @@ set to `no` at the beginning of them.
 --no-ff::
 --ff-only::
 	Specifies how a merge is handled when the merged-in history is
-	already a descendant of the current history.  `--ff` is the
-	default unless merging an annotated (and possibly signed) tag
-	that is not stored in its natural place in the `refs/tags/`
-	hierarchy, in which case `--no-ff` is assumed.
+	already a descendant of the current history.
+	+
+	In `git pull`, `--ff-only` is the default unless `--rebase` or
+	`--no-rebase` is specified, in which case the default is `--ff`.
+	However, the default changes again to `--no-ff` in the unlikely
+	scenario where an annotated (and possibly signed) tag that is not
+	stored in its natural place in the `refs/tags/` hierarchy is being
+	merged.
+	+
+	In `git merge`, `--ff` is always the default.
 +
 With `--ff`, when possible resolve the merge as a fast-forward (only
 update the branch pointer to match the merged branch; do not create a

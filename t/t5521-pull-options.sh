@@ -175,8 +175,8 @@ test_expect_success 'git pull --allow-unrelated-histories' '
 	) &&
 	(
 		cd dst &&
-		test_must_fail git pull ../src side &&
-		git pull --allow-unrelated-histories ../src side
+		test_must_fail git pull --no-rebase ../src side &&
+		git pull --no-rebase --allow-unrelated-histories ../src side
 	)
 '
 

@@ -891,7 +891,7 @@ test_expect_success 'merge annotated/signed tag w/o tracking' '
 		# tag from the "upstream", this pull defaults to --no-ff
 		cd dst &&
 		git pull .. c0 &&
-		git pull .. anno1 &&
+		git pull --no-rebase .. anno1 &&
 		git rev-parse HEAD^2 >actual &&
 		test_cmp expect actual
 	)

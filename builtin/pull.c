@@ -292,17 +292,21 @@ static void set_reflog_message(int argc, const char **argv)
 }
 
 /**
- * If pull.ff is unset, returns NULL. If pull.ff is "true", returns "--ff". If
- * pull.ff is "false", returns "--no-ff". If pull.ff is "only", returns
- * "--ff-only". Otherwise, if pull.ff is set to an invalid value, die with an
- * error.
+ * If pull.ff is unset, returns NULL if pull.rebase is set or "--ff-only" if
+ * pull.rebase is not set. If pull.ff is "true", returns "--ff". If pull.ff is
+ * "false", returns "--no-ff". If pull.ff is "only", returns "--ff-only".
+ * Otherwise, if pull.ff is set to an invalid value, die with an error.
  */
 static const char *config_get_ff(void)
 {
 	const char *value;
 
-	if (git_config_get_value("pull.ff", &value))
-		return NULL;
+	if (git_config_get_value("pull.ff", &value)) {
+		if (opt_rebase < 0)
+			return "--ff-only";
+		else
+			return NULL;
+	}
 
 	switch (git_parse_maybe_bool(value)) {
 	case 0:
@@ -322,7 +326,7 @@ static const char *config_get_ff(void)
  * value of "branch.$curr_branch.rebase", where $curr_branch is the current
  * branch, and if HEAD is detached or the configuration key does not exist,
  * looks for the value of "pull.rebase". If both configuration keys do not
- * exist, returns REBASE_FALSE.
+ * exist, returns REBASE_INVALID.
  */
 static enum rebase_type config_get_rebase(void)
 {
@@ -344,23 +348,7 @@ static enum rebase_type config_get_rebase(void)
 	if (!git_config_get_value("pull.rebase", &value))
 		return parse_config_rebase("pull.rebase", value, 1);
 
-	if (opt_verbosity >= 0 && !opt_ff) {
-		warning(_("Starting in Git 3.0, the default behavior of `git pull` will change\n"
-			"when it is not specified how to reconcile divergent branches. You can\n"
-			"squelch this message by running one of the following commands sometime\n"
-			"before your next pull:\n"
-			"\n"
-			"  git config pull.rebase false  # merge (the current default)\n"
-			"  git config pull.rebase true   # rebase\n"
-			"  git config pull.ff only       # fast-forward only (the future default)\n"
-			"\n"
-			"You can replace \"git config\" with \"git config --global\" to set a default\n"
-			"preference for all repositories. You can also pass --rebase, --no-rebase,\n"
-			"or --ff-only on the command line to override the configured default per\n"
-			"invocation.\n"));
-	}
-
-	return REBASE_FALSE;
+	return REBASE_INVALID;
 }
 
 /**
@@ -931,11 +919,14 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 
 	parse_repo_refspecs(argc, argv, &repo, &refspecs);
 
+	if (opt_rebase < 0)
+		opt_rebase = config_get_rebase();
+
 	if (!opt_ff)
 		opt_ff = xstrdup_or_null(config_get_ff());
 
 	if (opt_rebase < 0)
-		opt_rebase = config_get_rebase();
+		opt_rebase = REBASE_FALSE;
 
 	if (read_cache_unmerged())
 		die_resolve_conflict("pull");

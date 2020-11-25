@@ -15,7 +15,7 @@ test_pull_autostash () {
 	git reset --hard before-rebase &&
 	echo dirty >new_file &&
 	git add new_file &&
-	git pull "$@" . copy &&
+	git pull --ff "$@" . copy &&
 	test_cmp_rev HEAD^"$expect_parent_num" copy &&
 	echo dirty >expect &&
 	test_cmp expect new_file &&
@@ -27,7 +27,7 @@ test_pull_autostash_fail () {
 	git reset --hard before-rebase &&
 	echo dirty >new_file &&
 	git add new_file &&
-	test_must_fail git pull "$@" . copy 2>err &&
+	test_must_fail git pull --ff "$@" . copy 2>err &&
 	test_i18ngrep -E "uncommitted changes.|overwritten by merge:" err
 }
 
@@ -210,7 +210,7 @@ test_expect_success 'fail if upstream branch does not exist' '
 	test_config branch.test.merge refs/heads/nonexisting &&
 	echo file >expect &&
 	test_cmp expect file &&
-	test_must_fail git pull 2>err &&
+	test_must_fail git pull --no-rebase 2>err &&
 	test_i18ngrep "no such ref was fetched" err &&
 	test_cmp expect file
 '
@@ -223,17 +223,17 @@ test_expect_success 'fail if the index has unresolved entries' '
 	test_commit modified2 file &&
 	git ls-files -u >unmerged &&
 	test_must_be_empty unmerged &&
-	test_must_fail git pull . second &&
+	test_must_fail git pull --no-rebase . second &&
 	git ls-files -u >unmerged &&
 	test_file_not_empty unmerged &&
 	cp file expected &&
-	test_must_fail git pull . second 2>err &&
+	test_must_fail git pull --no-rebase . second 2>err &&
 	test_i18ngrep "Pulling is not possible because you have unmerged files." err &&
 	test_cmp expected file &&
 	git add file &&
 	git ls-files -u >unmerged &&
 	test_must_be_empty unmerged &&
-	test_must_fail git pull . second 2>err &&
+	test_must_fail git pull --no-rebase . second 2>err &&
 	test_i18ngrep "You have not concluded your merge" err &&
 	test_cmp expected file
 '
@@ -243,7 +243,7 @@ test_expect_success 'fast-forwards working tree if branch head is updated' '
 	test_when_finished "git checkout -f copy && git branch -D third" &&
 	echo file >expect &&
 	test_cmp expect file &&
-	git pull . second:third 2>err &&
+	git pull --no-rebase . second:third 2>err &&
 	test_i18ngrep "fetch updated the current branch head" err &&
 	echo modified >expect &&
 	test_cmp expect file &&
@@ -256,7 +256,7 @@ test_expect_success 'fast-forward fails with conflicting work tree' '
 	echo file >expect &&
 	test_cmp expect file &&
 	echo conflict >file &&
-	test_must_fail git pull . second:third 2>err &&
+	test_must_fail git pull --no-rebase . second:third 2>err &&
 	test_i18ngrep "Cannot fast-forward your working tree" err &&
 	echo conflict >expect &&
 	test_cmp expect file &&

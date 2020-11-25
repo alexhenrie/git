@@ -345,13 +345,14 @@ static enum rebase_type config_get_rebase(void)
 		return parse_config_rebase("pull.rebase", value, 1);
 
 	if (opt_verbosity >= 0 && !opt_ff) {
-		warning(_("Pulling without specifying how to reconcile divergent branches is\n"
-			"discouraged. You can squelch this message by running one of the following\n"
-			"commands sometime before your next pull:\n"
+		warning(_("Starting in Git 3.0, the default behavior of `git pull` will change\n"
+			"when it is not specified how to reconcile divergent branches. You can\n"
+			"squelch this message by running one of the following commands sometime\n"
+			"before your next pull:\n"
 			"\n"
-			"  git config pull.rebase false  # merge (the default strategy)\n"
+			"  git config pull.rebase false  # merge (the current default)\n"
 			"  git config pull.rebase true   # rebase\n"
-			"  git config pull.ff only       # fast-forward only\n"
+			"  git config pull.ff only       # fast-forward only (the future default)\n"
 			"\n"
 			"You can replace \"git config\" with \"git config --global\" to set a default\n"
 			"preference for all repositories. You can also pass --rebase, --no-rebase,\n"

@@ -183,6 +183,41 @@ test_expect_success 'pull prevents non-fast-forward with "only" in pull.ff' '
 	test_must_fail git pull . c3
 '
 
+test_expect_success 'pull prevents non-fast-forward with pull.ff=only and pull.rebase=true' '
+	git reset --hard c1 &&
+	test_config pull.ff only &&
+	test_config pull.rebase true &&
+	test_must_fail git pull . c3
+'
+
+test_expect_success 'pull prevents non-fast-forward with pull.ff=only and pull.rebase=false' '
+	git reset --hard c1 &&
+	test_config pull.ff only &&
+	test_config pull.rebase false &&
+	test_must_fail git pull . c3
+'
+
+test_expect_success 'pull prevents non-fast-forward with --rebase --ff-only' '
+	git reset --hard c1 &&
+	test_must_fail git pull --rebase --ff-only . c3
+'
+
+test_expect_success 'pull prevents non-fast-forward with --no-rebase --ff-only' '
+	git reset --hard c1 &&
+	test_must_fail git pull --no-rebase --ff-only . c3
+'
+
+test_expect_success 'pull allows non-fast-forward with --ff-only --rebase' '
+	git reset --hard c1 &&
+	git pull --ff-only --rebase . c3
+'
+
+test_expect_success 'pull allows non-fast-forward with pull.ff=only and --rebase' '
+	git reset --hard c1 &&
+	test_config pull.ff only &&
+	git pull --rebase . c3
+'
+
 test_expect_success 'merge c1 with c2 (ours in pull.twohead)' '
 	git reset --hard c1 &&
 	git config pull.twohead ours &&

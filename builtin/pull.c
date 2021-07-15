@@ -55,12 +55,17 @@ static enum rebase_type parse_config_rebase(const char *key, const char *value,
 static int parse_opt_rebase(const struct option *opt, const char *arg, int unset)
 {
 	enum rebase_type *value = opt->value;
+	char **ff_value = (char **)opt->extra;
 
 	if (arg)
 		*value = parse_config_rebase("--rebase", arg, 0);
 	else
 		*value = unset ? REBASE_FALSE : REBASE_TRUE;
-	return *value == REBASE_INVALID ? -1 : 0;
+	if (*value == REBASE_INVALID)
+		return -1;
+	if (*value != REBASE_FALSE)
+		*ff_value = xstrdup("--ff");
+	return 0;
 }
 
 static const char * const pull_usage[] = {
@@ -125,10 +130,11 @@ static struct option pull_options[] = {
 
 	/* Options passed to git-merge or git-rebase */
 	OPT_GROUP(N_("Options related to merging")),
-	OPT_CALLBACK_F('r', "rebase", &opt_rebase,
+	{ OPTION_CALLBACK, 'r', "rebase", &opt_rebase,
 		"(false|true|merges|preserve|interactive)",
 		N_("incorporate changes by rebasing rather than merging"),
-		PARSE_OPT_OPTARG, parse_opt_rebase),
+		PARSE_OPT_OPTARG, parse_opt_rebase, REBASE_FALSE, NULL,
+		(intptr_t)&opt_ff },
 	OPT_PASSTHRU('n', NULL, &opt_diffstat, NULL,
 		N_("do not show a diffstat at the end of the merge"),
 		PARSE_OPT_NOARG | PARSE_OPT_NONEG),
@@ -1046,9 +1052,14 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 
 	can_ff = get_can_ff(&orig_head, &merge_heads.oid[0]);
 
-	if (rebase_unspecified && !opt_ff && !can_ff) {
-		if (opt_verbosity >= 0)
-			show_advice_pull_non_ff();
+	if (!can_ff) {
+		if (opt_ff) {
+			if (!strcmp(opt_ff, "--ff-only"))
+				die_ff_impossible();
+		} else {
+			if (rebase_unspecified && opt_verbosity >= 0)
+				show_advice_pull_non_ff();
+		}
 	}
 
 	if (opt_rebase) {

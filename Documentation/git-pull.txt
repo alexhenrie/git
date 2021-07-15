@@ -107,7 +107,7 @@ include::merge-options.txt[]
 	branch after fetching. If there is a remote-tracking branch
 	corresponding to the upstream branch and the upstream branch
 	was rebased since last fetched, the rebase uses that information
-	to avoid rebasing non-local changes.
+	to avoid rebasing non-local changes. Implies --ff.
 +
 When set to `merges`, rebase using `git rebase --rebase-merges` so that
 the local merge commits are included in the rebase (see

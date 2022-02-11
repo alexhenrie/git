@@ -214,6 +214,11 @@ log.follow::
 	i.e. it cannot be used to follow multiple files and does not work well
 	on non-linear history.
 
+log.graph::
+	If `true`, `git log` and related commands will act as if the
+	`--graph` option was passed to them unless an incompatible option is
+	also specified.
+
 log.showRoot::
 	If `false`, `git log` and related commands will not treat the
 	initial commit as a big creation event.  Any root commits in

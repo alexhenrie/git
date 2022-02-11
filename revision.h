@@ -249,6 +249,8 @@ struct rev_info {
 
 	/* Display history graph */
 	struct git_graph *graph;
+	/* whether to initialize graph if it has not been initialized already */
+	int graph_default;
 
 	/* special limits */
 	int skip_count;

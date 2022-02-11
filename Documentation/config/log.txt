@@ -35,6 +35,11 @@ log.follow::
 	i.e. it cannot be used to follow multiple files and does not work well
 	on non-linear history.
 
+log.graph::
+	If true, makes linkgit:git-log[1], linkgit:git-show[1], and
+	linkgit:git-whatchanged[1] assume `--graph` unless an incompatible
+	option is also specified.
+
 log.graphColors::
 	A list of colors, separated by commas, that can be used to draw
 	history lines in `git log --graph`.

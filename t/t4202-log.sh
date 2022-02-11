@@ -1695,6 +1695,20 @@ test_expect_success '--no-graph does not unset --parents' '
 	test_cmp expect actual
 '
 
+test_expect_success 'log.graph=true behaves like --graph' '
+	git log --graph >expect &&
+	test_config log.graph true &&
+	git log >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success '--no-graph countermands log.graph=true' '
+	git log >expect &&
+	test_config log.graph true &&
+	git log --no-graph >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success '--reverse and --graph conflict' '
 	test_must_fail git log --reverse --graph 2>stderr &&
 	test_i18ngrep "cannot be used together" stderr
@@ -1703,6 +1717,13 @@ test_expect_success '--reverse and --graph conflict' '
 test_expect_success '--reverse --graph --no-graph works' '
 	git log --reverse >expect &&
 	git log --reverse --graph --no-graph >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success '--reverse ignores log.graph' '
+	git log --reverse >expect &&
+	test_config log.graph true &&
+	git log --reverse >actual &&
 	test_cmp expect actual
 '
 
@@ -1717,6 +1738,13 @@ test_expect_success '--show-linear-break --graph --no-graph works' '
 	test_cmp expect actual
 '
 
+test_expect_success '--show-linear-break ignores log.graph' '
+	git log --show-linear-break >expect &&
+	test_config log.graph true &&
+	git log --show-linear-break >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success '--no-walk and --graph conflict' '
 	test_must_fail git log --no-walk --graph 2>stderr &&
 	test_i18ngrep "cannot be used together" stderr
@@ -1725,6 +1753,13 @@ test_expect_success '--no-walk and --graph conflict' '
 test_expect_success '--no-walk --graph --no-graph works' '
 	git log --no-walk >expect &&
 	git log --no-walk --graph --no-graph >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success '--no-walk ignores log.graph' '
+	git log --no-walk >expect &&
+	test_config log.graph true &&
+	git log --no-walk >actual &&
 	test_cmp expect actual
 '
 
@@ -1737,6 +1772,13 @@ test_expect_success '--walk-reflogs and --graph conflict' '
 test_expect_success '--walk-reflogs --graph --no-graph works' '
 	git log --walk-reflogs >expect &&
 	git log --walk-reflogs --graph --no-graph >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success '--walk-reflogs ignores log.graph' '
+	git log --walk-reflogs >expect &&
+	test_config log.graph true &&
+	git log --walk-reflogs >actual &&
 	test_cmp expect actual
 '
 

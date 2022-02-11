@@ -48,6 +48,7 @@ static int default_show_root = 1;
 static int default_follow;
 static int default_show_signature;
 static int default_encode_email_headers = 1;
+static int default_graph;
 static int decoration_style;
 static int decoration_given;
 static int use_mailmap_config = 1;
@@ -156,6 +157,7 @@ static void cmd_log_init_defaults(struct rev_info *rev)
 	rev->show_signature = default_show_signature;
 	rev->encode_email_headers = default_encode_email_headers;
 	rev->diffopt.flags.allow_textconv = 1;
+	rev->graph_default = default_graph;
 
 	if (default_date_mode)
 		parse_date_format(default_date_mode, &rev->date_mode);
@@ -517,6 +519,10 @@ static int git_log_config(const char *var, const char *value, void *cb)
 	}
 	if (!strcmp(var, "log.showsignature")) {
 		default_show_signature = git_config_bool(var, value);
+		return 0;
+	}
+	if (!strcmp(var, "log.graph")) {
+		default_graph = git_config_bool(var, value);
 		return 0;
 	}
 

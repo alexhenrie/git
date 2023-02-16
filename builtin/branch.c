@@ -680,6 +680,14 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 		OPT__FORCE(&force, N_("force creation, move/rename, deletion"), PARSE_OPT_NOCOMPLETE),
 		OPT_MERGED(&filter, N_("print only branches that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only branches that are not merged")),
+		OPT_SET_INT_F(0, "has-upstream", &filter.has_upstream,
+			      N_("print only branches that track an upstream branch"), 1, PARSE_OPT_NONEG),
+		OPT_SET_INT_F(0, "no-has-upstream", &filter.has_upstream,
+			      N_("print only branches that do not track an upstream branch"), -1, PARSE_OPT_NONEG),
+		OPT_SET_INT_F(0, "gone", &filter.upstream_gone,
+			      N_("print only branches that track a gone upstream branch"), 1, PARSE_OPT_NONEG),
+		OPT_SET_INT_F(0, "no-gone", &filter.upstream_gone,
+			      N_("print only branches that do not track a gone upstream branch"), -1, PARSE_OPT_NONEG),
 		OPT_COLUMN(0, "column", &colopts, N_("list branches in columns")),
 		OPT_REF_SORT(&sorting_options),
 		OPT_CALLBACK(0, "points-at", &filter.points_at, N_("object"),
@@ -719,7 +727,8 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 		list = 1;
 
 	if (filter.with_commit || filter.no_commit ||
-	    filter.reachable_from || filter.unreachable_from || filter.points_at.nr)
+	    filter.reachable_from || filter.unreachable_from ||
+	    filter.points_at.nr || filter.has_upstream || filter.upstream_gone)
 		list = 1;
 
 	noncreate_actions = !!delete + !!rename + !!copy + !!new_upstream +

@@ -13,6 +13,8 @@ SYNOPSIS
 	[--column[=<options>] | --no-column] [--sort=<key>]
 	[--merged [<commit>]] [--no-merged [<commit>]]
 	[--contains [<commit>]] [--no-contains [<commit>]]
+	[--has-upstream | --no-has-upstream]
+	[--gone | --no-gone]
 	[--points-at <object>] [--format=<format>]
 	[(-r | --remotes) | (-a | --all)]
 	[--list] [<pattern>...]
@@ -325,6 +327,19 @@ superproject's "origin/main", but tracks the submodule's "origin/main".
 	detached HEAD (if present) first, then local branches and
 	finally remote-tracking branches. See linkgit:git-config[1].
 
+--has-upstream::
+	Only list branches that track an upstream branch. Implies `--list`.
+
+--no-has-upstream::
+	Only list branches that do not track an upstream branch. Implies `--list`.
+
+--gone::
+	Only list branches that track a gone upstream branch. Implies `--list` and
+	`--has-upstream`.
+
+--no-gone::
+	Only list branches that do not track a gone upstream branch. Implies
+	`--list`.
 
 --points-at <object>::
 	Only list branches of the given object.

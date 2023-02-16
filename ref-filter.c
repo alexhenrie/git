@@ -2358,6 +2358,42 @@ void ref_array_clear(struct ref_array *array)
 	}
 }
 
+static void do_tracking_filter(struct ref_filter_cbdata *ref_cbdata)
+{
+	struct ref_filter *filter = ref_cbdata->filter;
+	struct ref_array *array = ref_cbdata->array;
+	int i, old_nr;
+
+	old_nr = array->nr;
+	array->nr = 0;
+
+	for (i = 0; i < old_nr; i++) {
+		struct ref_array_item *item = array->items[i];
+		const char *branch_name = item->refname;
+		struct branch *branch;
+		int num_ours, num_theirs, gone;
+		const char *base;
+
+		skip_prefix(branch_name, "refs/heads/", &branch_name);
+		branch = branch_get(branch_name);
+		gone = stat_tracking_info(branch, &num_ours, &num_theirs,
+					  &base, 0, AHEAD_BEHIND_QUICK) < 0;
+
+		if (filter->has_upstream == 1 && !base)
+			goto remove;
+		if (filter->has_upstream == -1 && base)
+			goto remove;
+		if (filter->upstream_gone == 1 && (!base || !gone))
+			goto remove;
+		if (filter->upstream_gone == -1 && base && gone)
+			goto remove;
+		array->items[array->nr++] = array->items[i];
+		continue;
+remove:
+		free_array_item(item);
+	}
+}
+
 #define EXCLUDE_REACHED 0
 #define INCLUDE_REACHED 1
 static void reach_filter(struct ref_array *array,
@@ -2465,6 +2501,9 @@ int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int
 
 	clear_contains_cache(&ref_cbdata.contains_cache);
 	clear_contains_cache(&ref_cbdata.no_contains_cache);
+
+	if (filter->has_upstream || filter->upstream_gone)
+		do_tracking_filter(&ref_cbdata);
 
 	/*  Filters that need revision walking */
 	reach_filter(array, filter->reachable_from, INCLUDE_REACHED);

@@ -332,11 +332,17 @@ int option_fetch_parse_recurse_submodules(const struct option *opt,
 
 	if (unset) {
 		*v = RECURSE_SUBMODULES_OFF;
+	} else if (!arg) {
+		*v = RECURSE_SUBMODULES_ON;
 	} else {
-		if (arg)
-			*v = parse_fetch_recurse_submodules_arg(opt->long_name, arg);
-		else
-			*v = RECURSE_SUBMODULES_ON;
+		if (!*arg) {
+			warning(_("--recurse-submodules with an empty string "
+				  "argument is deprecated and will stop "
+				  "working in a future version of Git. Use "
+				  "--recurse-submodules without an argument "
+				  "instead, which does the same thing."));
+		}
+		*v = parse_fetch_recurse_submodules_arg(opt->long_name, arg);
 	}
 	return 0;
 }

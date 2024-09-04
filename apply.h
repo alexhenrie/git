@@ -3,6 +3,7 @@
 
 #include "hash.h"
 #include "lockfile.h"
+#include "merge-ll.h"
 #include "string-list.h"
 #include "strmap.h"
 
@@ -59,6 +60,7 @@ struct apply_state {
 	struct repository *repo;
 	const char *index_file;
 	enum apply_verbosity apply_verbosity;
+	struct ll_merge_options merge_opts;
 	char *fake_ancestor;
 	const char *patch_input_file;
 	int line_termination;

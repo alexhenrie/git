@@ -110,6 +110,7 @@ int init_apply_state(struct apply_state *state,
 	state->prefix = prefix;
 	state->repo = repo;
 	state->apply = 1;
+	state->merge_opts.conflict_style = -1;
 	state->line_termination = '\n';
 	state->p_value = 1;
 	state->p_context = UINT_MAX;
@@ -3578,7 +3579,7 @@ static int three_way_merge(struct apply_state *state,
 			  &our_file, "ours",
 			  &their_file, "theirs",
 			  state->repo->index,
-			  NULL);
+			  &state->merge_opts);
 	if (status == LL_MERGE_BINARY_CONFLICT)
 		warning("Cannot merge binary files: %s (%s vs. %s)",
 			path, "ours", "theirs");
@@ -3704,7 +3705,15 @@ static int try_threeway(struct apply_state *state,
 		return status;
 	}
 
-	if (status) {
+	if (state->merge_opts.variant) {
+		/*
+		 * XDL_MERGE_FAVOR_(OURS|THEIRS|UNION) automatically resolves
+		 * conflicts, but the ll_merge function is not yet smart enough
+		 * to report whether or not there were conflicts, so just print
+		 * a generic message.
+		 */
+		fprintf(stderr, _("Applied patch to '%s'.\n"), patch->new_name);
+	} else if (status) {
 		patch->conflicted_threeway = 1;
 		if (patch->is_new)
 			oidclr(&patch->threeway_stage[0], the_repository->hash_algo);
@@ -4980,6 +4989,23 @@ static int apply_option_parse_space_change(const struct option *opt,
 	return 0;
 }
 
+static int apply_option_parse_favorite(const struct option *opt,
+				       const char *arg, int unset)
+{
+	struct apply_state *state = opt->value;
+
+	BUG_ON_OPT_ARG(arg);
+	BUG_ON_OPT_NEG(unset);
+
+	if (!strcmp(opt->long_name, "ours"))
+		state->merge_opts.variant = XDL_MERGE_FAVOR_OURS;
+	else if (!strcmp(opt->long_name, "theirs"))
+		state->merge_opts.variant = XDL_MERGE_FAVOR_THEIRS;
+	else
+		state->merge_opts.variant = XDL_MERGE_FAVOR_UNION;
+	return 0;
+}
+
 static int apply_option_parse_whitespace(const struct option *opt,
 					 const char *arg, int unset)
 {
@@ -5151,6 +5177,18 @@ int apply_parse_options(int argc, const char **argv,
 			N_("also apply the patch (use with --stat/--summary/--check)")),
 		OPT_BOOL('3', "3way", &state->threeway,
 			 N_( "attempt three-way merge, fall back on normal patch if that fails")),
+		OPT_CALLBACK_F(0, "ours", state, NULL,
+			N_("for conflicts, use our version"),
+			PARSE_OPT_NOARG | PARSE_OPT_NONEG,
+			apply_option_parse_favorite),
+		OPT_CALLBACK_F(0, "theirs", state, NULL,
+			N_("for conflicts, use their version"),
+			PARSE_OPT_NOARG | PARSE_OPT_NONEG,
+			apply_option_parse_favorite),
+		OPT_CALLBACK_F(0, "union", state, NULL,
+			N_("for conflicts, use a union version"),
+			PARSE_OPT_NOARG | PARSE_OPT_NONEG,
+			apply_option_parse_favorite),
 		OPT_FILENAME(0, "build-fake-ancestor", &state->fake_ancestor,
 			N_("build a temporary index based on embedded index information")),
 		/* Think twice before adding "--nul" synonym to this */
@@ -5190,5 +5228,10 @@ int apply_parse_options(int argc, const char **argv,
 		OPT_END()
 	};
 
-	return parse_options(argc, argv, state->prefix, builtin_apply_options, apply_usage, 0);
+	argc = parse_options(argc, argv, state->prefix, builtin_apply_options, apply_usage, 0);
+
+	if (state->merge_opts.variant && !state->threeway)
+		die(_("--ours, --theirs, and --union require --3way"));
+
+	return argc;
 }
